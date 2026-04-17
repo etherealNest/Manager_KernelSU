@@ -146,6 +146,27 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Patching KernelSU Manager (spoofing)
+        working-directory: ${{ github.workspace }}
+        run: |
+          # Generating random applicationId
+          RANDOM_APPLICATIONID=$(printf "%s.%s.%s" \
+          "$( (tr -cd 'a-z' < /dev/urandom | head -c 3) 2>/dev/null )" \
+          "$( (tr -cd 'a-z' < /dev/urandom | head -c 9) 2>/dev/null )" \
+          "$( (tr -cd 'a-z' < /dev/urandom | head -c 4) 2>/dev/null )")
+
+          # Applying "${RANDOM_APPLICATIONID}"
+          sed -i "/defaultConfig/a\        applicationId = \"${RANDOM_APPLICATIONID}\"" manager/app/build.gradle.kts
+
+          # Removing a warning shield
+          sed -i '/showGkiWarning/ { n; s/ksuVersion.*/false/}' manager/app/src/main/java/me/weishu/kernelsu/ui/screen/home/HomeUiState.kt
+
+          # Replacing "app_name"
+          sed -i 's/>KernelSU</>Chess</' $(grep -rLl 'app_name' manager/app/src/main/res/**/strings.xml)
+
+          # Fixing "getVersionCode"
+          sed -i 's/30000/29998/' $(grep -rLl '30000')
+
       - name: Write key
         if: ${{ github.event_name == 'workflow_dispatch' || ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' )) || github.ref_type == 'tag' }}
         run: |
